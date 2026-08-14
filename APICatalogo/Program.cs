@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 using APICatalogo.Context;
 using APICatalogo.DTOs;
 using APICatalogo.DTOs.Mappings;
@@ -9,6 +10,7 @@ using APICatalogo.Repositories;
 using APICatalogo.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -20,6 +22,19 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers()
     .AddNewtonsoftJson(options =>
         options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore);
+
+//var AllowedOrigins = "_allowedOrigins";
+
+builder.Services.AddCors(options =>
+    options.AddDefaultPolicy(
+    policy =>
+    {
+        policy.AllowAnyOrigin()
+              .WithMethods("GET", "POST")
+              .AllowAnyHeader();
+    })
+);
+
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -98,6 +113,22 @@ builder.Services.AddAuthorization(options =>
                                                 || context.User.IsInRole("SuperAdmin")));
 });
 
+builder.Services.AddRateLimiter(RateLimiterOptions =>
+{
+    RateLimiterOptions.AddFixedWindowLimiter(policyName: "fixedwindow", options =>
+    {
+        options.PermitLimit = 1;
+        options.Window = TimeSpan.FromSeconds(5);
+        options.QueueLimit = 2;
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+      
+
+    });
+
+    RateLimiterOptions.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+});
+
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
@@ -119,8 +150,12 @@ else
 }
 
 app.UseHttpsRedirection();
+//CORS
+app.UseCors();
+
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();

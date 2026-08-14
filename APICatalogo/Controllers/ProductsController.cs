@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using X.PagedList;
@@ -19,6 +20,7 @@ namespace APICatalogo.Controllers
     // /products
     [Route("[controller]")]
     [ApiController]
+    [EnableRateLimiting("fixedwindow")]
     public class ProductsController : ControllerBase
     {
         private readonly IUnitOfWork _uof;
