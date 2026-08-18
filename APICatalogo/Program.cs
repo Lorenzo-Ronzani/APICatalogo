@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -8,6 +9,7 @@ using APICatalogo.Extensions;
 using APICatalogo.Models;
 using APICatalogo.Repositories;
 using APICatalogo.Services;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
@@ -40,7 +42,29 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "apicatalogo", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo
+    { 
+        Title = "APICatalogo",
+        Version = "v1", 
+        Description = "Catálogo de Produtos e Categorias",
+        TermsOfService = new Uri("https://my-portfolio-pearl-two-63.vercel.app/"),
+        Contact = new OpenApiContact
+        {
+            Name = "lorenzoRonzani",
+            Email = "lorenzo.lronzani@gmail.com",
+            Url = new Uri ("https://my-portfolio-pearl-two-63.vercel.app/"),
+
+        },
+        License = new OpenApiLicense
+        {
+            Name = "Usar sobre LICX",
+            Url = new Uri ("https://my-portfolio-pearl-two-63.vercel.app/")
+        }
+    });
+
+    var xmlFileName = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    c.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFileName));
+    
 
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
     {
@@ -126,6 +150,22 @@ builder.Services.AddRateLimiter(RateLimiterOptions =>
     });
 
     RateLimiterOptions.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+});
+
+builder.Services.AddApiVersioning(o =>
+{
+    o.DefaultApiVersion = new ApiVersion(1, 0);
+    o.AssumeDefaultVersionWhenUnspecified = true;
+    o.ReportApiVersions = true;
+    o.ApiVersionReader = ApiVersionReader.Combine(
+                        new QueryStringApiVersionReader(),
+                        new UrlSegmentApiVersionReader());
+}).AddApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
+
 
 });
 

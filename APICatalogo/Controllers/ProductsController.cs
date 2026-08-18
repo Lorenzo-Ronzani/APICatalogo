@@ -21,6 +21,7 @@ namespace APICatalogo.Controllers
     [Route("[controller]")]
     [ApiController]
     [EnableRateLimiting("fixedwindow")]
+    [ApiConventionType(typeof(DefaultApiConventions))]
     public class ProductsController : ControllerBase
     {
         private readonly IUnitOfWork _uof;
@@ -32,6 +33,11 @@ namespace APICatalogo.Controllers
             _mapper = mapper;
         }
 
+        /// <summary>
+        /// Exibe uma lista de produtos a partir de uma CategoriaId
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [HttpGet("products/{id}")]
         public async Task< ActionResult<IEnumerable<ProductDTO>>> GetProductsByCategoryAsync(int id)
         {
@@ -80,9 +86,16 @@ namespace APICatalogo.Controllers
             return GetProducts(products);
         }
 
-        // /products
+        //products
+        /// <summary>
+        /// Exibe uma relação dos produtos
+        /// </summary>
+        /// <returns>Retorna uma lista de objetos Products</returns>
         [HttpGet]
         [Authorize(Policy = "UserOnly")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesDefaultResponseType]
         public async Task< ActionResult<IEnumerable<ProductDTO>>> GetAsync()
         {
             var products = await _uof.ProductRepository.GetAllAsync();
@@ -96,8 +109,15 @@ namespace APICatalogo.Controllers
 
         }
         // /products/first
+        /// <summary>
+        /// Exibe um objeto do primeiro Produto cadastrado
+        /// </summary>
+        /// <returns></returns>
         [HttpGet("first")]
-        public async Task< ActionResult<ProductDTO>> GetFirstAsync()
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesDefaultResponseType]
+        public async Task<ActionResult<ProductDTO>> GetFirstAsync()
         {
             var product = await _uof.ProductRepository.GetAsync(p => p.ProductId == 1);
             if (product is null)
@@ -109,6 +129,11 @@ namespace APICatalogo.Controllers
             return Ok(productDto);
         }
         // products/id
+        /// <summary>
+        /// Obtem um produto pelo seu identificado productId
+        /// </summary>
+        /// <param name="id">Código do produto</param>
+        /// <returns>O objeto do primeiro produto da base de dados /returns>
         [HttpGet("{id:int:min(1)}", Name = "GetProduct")]
         public async Task< ActionResult<ProductDTO>> GetAsync(int id)
         {
@@ -122,6 +147,11 @@ namespace APICatalogo.Controllers
         }
 
         // /products
+        /// <summary>
+        /// Inclui um novo Produto
+        /// </summary>
+        /// <param name="productDto"></param>
+        /// <returns>O objeto Product incluido</returns>
         [HttpPost]
         public async Task< ActionResult<ProductDTO>> PostAsync(ProductDTO productDto)
         {
@@ -142,6 +172,10 @@ namespace APICatalogo.Controllers
 
 
         [HttpPatch("{id}/UpdatePartial")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesDefaultResponseType]
         public async Task< ActionResult<ProductDTOUpdateResponse>> PatchAsync(int id, JsonPatchDocument<ProductDTOUpdateRequest> patchProductDTO)
         {
             if(patchProductDTO is null || id <= 0)
@@ -172,6 +206,9 @@ namespace APICatalogo.Controllers
 
         // /products/id
         [HttpPut("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesDefaultResponseType]
         public async Task<ActionResult<ProductDTO>> PutAsync(int id, ProductDTO productDto)
         {
             if (id != productDto.ProductId)

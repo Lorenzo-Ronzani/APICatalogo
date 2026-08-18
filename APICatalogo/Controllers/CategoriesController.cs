@@ -48,9 +48,15 @@ namespace APICatalogo.Controllers
             return Ok(categories);
 
         }
-
+        /// <summary>
+        /// Obtem uma lista de objetos Category
+        /// </summary>
+        /// <returns>Uma lista de objetos Category </returns>
         [HttpGet]
         [Authorize]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesDefaultResponseType]
         public async Task<ActionResult<IEnumerable<CategoryDTO>>> GetAsync()
         {
             var categories = await _uof.CategoryRepository.GetAllAsync();
@@ -98,8 +104,15 @@ namespace APICatalogo.Controllers
 
             return GetCategories(filteredCategories);
         }
-
+        /// <summary>
+        /// Obtem uma Category pelo seu Id
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>Objetos Id</returns>
         [HttpGet("{id:int}", Name = "GetCategory")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesDefaultResponseType]
         public async Task<ActionResult<CategoryDTO>> GetAsync(int id)
         {
 
@@ -114,8 +127,27 @@ namespace APICatalogo.Controllers
             var categoryDto = category.ToCategoryDTO();
             return Ok(categoryDto);
         }
-
+        /// <summary>
+        /// Inclui uma nova Category
+        /// </summary>
+        /// <remarks>
+        /// Exemplo de request:
+        /// 
+        ///     POST api/categories
+        ///     {
+        ///         "categoryId": 1,
+        ///         "name": "categoria1",
+        ///         "imageUlr": "http://teste.net/1.jpg"
+        ///     }
+        /// </remarks>
+        /// <param name="categoryDto"></param>
+        /// <returns>O objeto Category incluido</returns>
+        /// <remarks>Retorna o objeto Category inlcuido</remarks>
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesDefaultResponseType]
         public async Task<ActionResult<CategoryDTO>> PostAsync(CategoryDTO categoryDto)
         {
             try
@@ -141,6 +173,10 @@ namespace APICatalogo.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesDefaultResponseType]
         public async Task<ActionResult<CategoryDTO>> PutAsync(int id, CategoryDTO categoryDto)
         {
             try
@@ -169,6 +205,10 @@ namespace APICatalogo.Controllers
 
         [HttpDelete("{id:int}")]
         [Authorize(Policy = "AdminOnly")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesDefaultResponseType]
         public async Task<ActionResult<CategoryDTO>> DeleteAsync(int id)
         {
             try

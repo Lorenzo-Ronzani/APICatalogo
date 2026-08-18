@@ -91,7 +91,12 @@ namespace APICatalogo.Controllers
                 error = "Unable to find user"
             });
         }
-
+        /// <summary>
+        /// Verifica as credenciais de um usuário
+        /// </summary>
+        /// <param name="modelDTO"></param>
+        /// <returns>Status 200 e o token para o cliente</returns>
+        /// <remarks>Retorna o Status 200 e o token </remarks>
         [HttpPost]
         [Route("login")]
         public async Task<IActionResult> Login([FromBody] LoginModelDTO modelDTO)
@@ -138,7 +143,12 @@ namespace APICatalogo.Controllers
 
             return Unauthorized();
         }
-
+        /// <summary>
+        /// Registra um novo usuario
+        /// </summary>
+        /// <param name="model">Um objeto UserDTO</param>
+        /// <returns>Status 200</returns>
+        /// <remarks>Retorna o Status 200</remarks>
         [HttpPost]
         [Route("register")]
 
