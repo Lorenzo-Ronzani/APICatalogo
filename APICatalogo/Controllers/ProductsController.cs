@@ -135,6 +135,9 @@ namespace APICatalogo.Controllers
         /// <param name="id">Código do produto</param>
         /// <returns>O objeto do primeiro produto da base de dados /returns>
         [HttpGet("{id:int:min(1)}", Name = "GetProduct")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesDefaultResponseType]
         public async Task< ActionResult<ProductDTO>> GetAsync(int id)
         {
             var product = await _uof.ProductRepository.GetAsync(p => p.ProductId == id);

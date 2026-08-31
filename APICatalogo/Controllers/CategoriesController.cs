@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
 using X.PagedList;
 
@@ -16,18 +17,20 @@ namespace APICatalogo.Controllers
 {
     [Route("[controller]")]
     [ApiController]
-    [EnableRateLimiting("fixedwindow")]
+    //[EnableRateLimiting("fixedwindow")]
     public class CategoriesController : ControllerBase
     {
 
         private readonly IUnitOfWork _uof;
         private readonly IConfiguration _configuration;
+        private readonly IMemoryCache _cache;
+        private const string CacheCategoriesKey = "CacheCategories";
 
-        public CategoriesController(IUnitOfWork uof, IConfiguration configuration)
+        public CategoriesController(IUnitOfWork uof, IConfiguration configuration, IMemoryCache cache)
         {
             _uof = uof;
             _configuration = configuration;
-
+            _cache = cache;
         }
 
         [HttpGet("readConfigFile")]
@@ -43,10 +46,19 @@ namespace APICatalogo.Controllers
         [HttpGet("products")]
         public async Task<ActionResult<IEnumerable<Category>>> GetProductCategoriesAsync()
         {
-            //return _context.Categories.Include(p => p.Products).AsNoTracking().ToList();
-            var categories = await _uof.CategoryRepository.GetAllAsync();
-            return Ok(categories);
+            if (!_cache.TryGetValue(CacheCategoriesKey, out IEnumerable<Category>? categories))
+            {
+                categories = await _uof.CategoryRepository.GetAllAsync();
 
+                if (categories is null)
+                {
+                    return NotFound("Category not found");
+                }
+
+                _cache.Set(CacheCategoriesKey, categories, TimeSpan.FromSeconds(30));
+            }
+
+            return Ok(categories);
         }
         /// <summary>
         /// Obtem uma lista de objetos Category
@@ -59,14 +71,19 @@ namespace APICatalogo.Controllers
         [ProducesDefaultResponseType]
         public async Task<ActionResult<IEnumerable<CategoryDTO>>> GetAsync()
         {
-            var categories = await _uof.CategoryRepository.GetAllAsync();
-
-            if (categories is null)
+            if (!_cache.TryGetValue(CacheCategoriesKey, out IEnumerable<Category>? categories))
             {
-                return NotFound("Category not found");
+                categories = await _uof.CategoryRepository.GetAllAsync();
+
+                if (categories is null)
+                {
+                    return NotFound("Category not found");
+                }
+
+                _cache.Set(CacheCategoriesKey, categories, TimeSpan.FromSeconds(30));
             }
 
-            var categoriesDto = categories.ToCategoryDTOList();
+            var categoriesDto = categories!.ToCategoryDTOList();
 
             return Ok(categoriesDto);
         }
@@ -118,13 +135,22 @@ namespace APICatalogo.Controllers
 
             //throw new Exception("Exception trying to return the category by id");
 
-            var category = await _uof.CategoryRepository.GetAsync(c => c.CategoryId == id);
-            if (category is null)
+            var cacheCategoryKey = $"CacheCategory_{id}";
+
+            if (!_cache.TryGetValue(cacheCategoryKey, out Category? category))
             {
-                return NotFound("Category not found");
+                category = await _uof.CategoryRepository.GetAsync(c => c.CategoryId == id);
+
+                if (category is null)
+                {
+                    return NotFound("Category not found");
+                }
+
+                _cache.Set(cacheCategoryKey, category, TimeSpan.FromSeconds(30));
             }
 
-            var categoryDto = category.ToCategoryDTO();
+            var categoryDto = category!.ToCategoryDTO();
+
             return Ok(categoryDto);
         }
         /// <summary>
@@ -162,6 +188,8 @@ namespace APICatalogo.Controllers
                 var newCategory = _uof.CategoryRepository.Create(category);
                 await _uof.CommitAsync();
 
+                _cache.Remove(CacheCategoriesKey);
+
                 var newCategoryDto = newCategory.ToCategoryDTO();
 
                 return new CreatedAtRouteResult("GetCategory", new { id = newCategoryDto.CategoryId }, newCategoryDto);
@@ -191,6 +219,8 @@ namespace APICatalogo.Controllers
                 var updatedCategory = _uof.CategoryRepository.Update(category);
                 await _uof.CommitAsync();
 
+                _cache.Remove(CacheCategoriesKey);
+                _cache.Remove($"CacheCategory_{id}");
 
                 var updatedCategoryDto = updatedCategory.ToCategoryDTO();
 
@@ -221,6 +251,9 @@ namespace APICatalogo.Controllers
 
                 var excludedCategory = _uof.CategoryRepository.Delete(category);
                 await _uof.CommitAsync();
+
+                _cache.Remove(CacheCategoriesKey);
+                _cache.Remove($"CacheCategory_{id}");
 
                 var excludedCategoryDto = excludedCategory.ToCategoryDTO();
 
